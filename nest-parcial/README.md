@@ -63,3 +63,17 @@ API REST en NestJS y Mongoose para la gestión de **Usuarios (`/users`)** y **Ta
 | `POST` | `/tasks` | Restringido (`Authorization: admin-secret-token`) | Crear una tarea asociada a un usuario |
 
 También puedes importar `nest-parcial.postman_collection.json` en Postman o utilizar `requests.http` con la extensión REST Client de VS Code para probar manualmente los endpoints.
+
+## Evidencia de Funcionamiento
+
+### Caso1
+Creé `CreateTaskDto` con `class-validator`, permitiendo únicamente `title`, `description`, `completed` y `userId`. También configuré un `ValidationPipe` global en `main.ts` con `whitelist` y `forbidNonWhitelisted`, y cambié el esquema de tareas a `strict: true`. Al enviar `isAdmin`, `role` e `internalFlag`, la API ahora responde `400 Bad Request`: `{"message":["property isAdmin should not exist","property role should not exist","property internalFlag should not exist"],"error":"Bad Request","statusCode":400}`
+
+### Caso2
+Hice que `UsersModule` exportara `UsersService` y lo importé en `TasksModule`, eliminando de este último el registro de `UserSchema`. Ahora tareas verifica la existencia del usuario únicamente mediante `UsersService`. Al crear una tarea con un usuario inexistente, la API responde `404 Not Found`: `{"message":"Usuario con ID 600000000000000000000000 no encontrado","error":"Not Found","statusCode":404}`
+
+### Caso3
+Eliminé `AuthMiddleware` y creé `AuthGuard`, que valida la cabecera `Authorization` y lanza `ForbiddenException` cuando no es válida. Lo apliqué únicamente a `POST /tasks`. Sin credenciales, `GET /tasks` y `GET /tasks/:id` responden `200 OK`, mientras que `POST /tasks` responde `403 Forbidden` con el formato estándar: `{"message":"Prohibido","error":"Forbidden","statusCode":403}`
+
+### Caso4
+Eliminé los modelos de Mongoose de `TasksController`, que ahora depende exclusivamente de `TasksService`. Trasladé la validación del usuario y la persistencia al método `create` del servicio. Agregué una prueba unitaria que mockea solo `TasksService`; `npm test` finaliza con `Test Suites: 2 passed, 2 total` y `Tests: 2 passed, 2 total`. Un `POST /tasks` válido responde `201 Created`
